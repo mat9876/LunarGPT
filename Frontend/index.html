@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Text Summarizer</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        #container {
+            display: flex;
+        }
+        #form-container {
+            width: 70%;
+        }
+        #history-container {
+            width: 30%;
+            padding-left: 20px;
+            border-left: 1px solid #000;
+        }
+        .history-item {
+            cursor: pointer;
+            color: blue;
+            text-decoration: underline;
+        }
+    </style>
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#summarize-form').submit(function(event) {
+                event.preventDefault();  // Prevent the default form submission
+
+                var formData = $(this).serialize();  // Serialize the form data
+
+                $.ajax({
+                    type: 'POST',
+                    url: 'http://127.0.0.1:5000/summarize',
+                    data: formData,
+                    success: function(response) {
+                        // Log the response for debugging
+                        console.log('Response:', response);
+
+                        // Update the summary and error messages without reloading the page
+                        if (response.error) {
+                            $('#error-message').text('Error: ' + response.error);
+                            $('#summary-message').text('');
+                        } else {
+                            $('#error-message').text('');
+                            $('#summary-message').text('Summary: ' + response.summary);
+                            // Clear the textarea
+                            $('textarea[name="text"]').val('');
+                            // Remove the summarize button
+                            $('input[type="submit"]').hide();
+                            updateHistory(response.history);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        // Display any errors that occur during the AJAX request
+                        console.error('Error:', error);
+                        $('#error-message').text('Error: ' + error);
+                        $('#summary-message').text('');
+                    }
+                });
+            });
+
+            function updateHistory(history) {
+                $('#history-container').empty();
+                history.reverse().forEach(function(item, index) {
+                    var displayText = item.summary.substring(0, 20) + '...';
+                    $('#history-container').prepend(
+                        '<div class="history-item" data-index="' + index + '">' + displayText + '</div>'
+                    );
+                });
+
+                $('.history-item').click(function() {
+                    var index = $(this).data('index');
+                    var item = history[index];
+                    $('#summary-message').text('Summary: ' + item.summary);
+                });
+            }
+
+            // Show the submit button when the textarea is focused
+            $('textarea[name="text"]').on('focus', function() {
+                $('input[type="submit"]').show();
+            });
+        });
+    </script>
+</head>
+<body>
+    <div id="container">
+        <div id="form-container">
+            <h1>Text Summarizer</h1>
+            <form id="summarize-form" method="post">
+                <textarea name="text" rows="10" cols="50"></textarea><br>
+                <input type="submit" value="Summarize">
+            </form>
+            <div id="error-message" style="color: red;"></div>
+            <div id="summary-message" style="color: green;"></div>
+        </div>
+        <div id="history-container">
+            <h2>History</h2>
+        </div>
+    </div>
+</body>
+</html>
